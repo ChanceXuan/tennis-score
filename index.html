@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0c1812">
+<title>网球语音计分</title>
+<style>
+  :root{
+    --bg:#0c1812; --card:#13241b; --card2:#0f1e16;
+    --line:#1f3a2b; --ink:#eef7ee; --muted:#8fae9b;
+    --ball:#d8f23c; --ball-dim:#a9c22e;
+    --danger:#ff7a6b; --ok:#5fd88a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    min-height:100%;}
+  body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);}
+  .page{max-width:560px; margin:0 auto; padding:16px 16px 28px; display:none;}
+  .page.show{display:block;}
+  h1{font-size:22px; margin:8px 0 2px; letter-spacing:1px;}
+  .sub{color:var(--muted); font-size:13px; margin:0 0 18px;}
+  .logo{font-size:34px; line-height:1;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px;}
+  .card h2{font-size:14px; color:var(--muted); font-weight:600; margin:0 0 12px; letter-spacing:.5px;}
+
+  /* 赛制选择 */
+  .formats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .fmt{border:1px solid var(--line); background:var(--card2); color:var(--ink);
+    border-radius:12px; padding:10px 4px; text-align:center; font-size:15px; font-weight:700;}
+  .fmt small{display:block; font-weight:400; color:var(--muted); font-size:11px; margin-top:2px;}
+  .fmt.sel{border-color:var(--ball); background:rgba(216,242,60,.12); color:var(--ball);}
+  .fmt.sel small{color:var(--ball-dim);}
+
+  /* 姓名输入 */
+  .name-row{display:flex; gap:8px; align-items:center; margin-bottom:10px;}
+  .name-row:last-child{margin-bottom:0;}
+  .name-tag{min-width:40px; height:26px; border-radius:999px; padding:0 8px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; color:#0c1812;}
+  .name-tag.p0{background:var(--ball);}
+  .name-tag.p1{background:#7ad3ff;}
+  .name-row input{flex:1; min-width:0; background:var(--card2); border:1px solid var(--line); color:var(--ink);
+    border-radius:12px; padding:12px; font-size:16px; outline:none;}
+  .name-row input:focus{border-color:var(--ball-dim);}
+
+  button{cursor:pointer; font-family:inherit;}
+  .btn-main{width:100%; border:none; border-radius:14px; padding:16px; font-size:18px; font-weight:800;
+    background:var(--ball); color:#0c1812; letter-spacing:2px;}
+  .btn-main:active{transform:scale(.985);}
+  .hint{color:var(--muted); font-size:12px; line-height:1.7; margin-top:12px;}
+
+  /* ===== 比赛页 ===== */
+  .top{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .top .fmt-label{color:var(--muted); font-size:13px;}
+  .btn-quit{background:none; border:1px solid var(--line); color:var(--muted); border-radius:10px; padding:6px 12px; font-size:13px;}
+
+  .scoreboard{background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden; margin-bottom:12px;}
+  .games-row{display:flex; align-items:center; justify-content:center; gap:14px; padding:12px 14px 4px;}
+  .games-row .gname{flex:1; font-size:15px; font-weight:700; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .games-row .gname.p0c{color:var(--ball);}
+  .games-row .gname.p1c{color:#7ad3ff;}
+  .games-row .gscore{font-size:26px; font-weight:800; min-width:84px; text-align:center; letter-spacing:2px;}
+  .round-label{text-align:center; color:var(--muted); font-size:12px; padding-bottom:8px;}
+
+  .points{display:flex; align-items:center; justify-content:center; padding:6px 10px 14px;}
+  .pt{flex:1; text-align:center; font-size:74px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1;}
+  .pt.flash{animation:pop .45s ease;}
+  .pt-sep{font-size:40px; color:var(--muted); padding:0 4px;}
+  .badge-row{min-height:28px; text-align:center; padding-bottom:12px;}
+  .badge{display:inline-block; border-radius:999px; padding:4px 14px; font-size:13px; font-weight:700;
+    background:rgba(216,242,60,.15); color:var(--ball); border:1px solid rgba(216,242,60,.35);}
+  .badge.hot{background:rgba(255,122,107,.15); color:var(--danger); border-color:rgba(255,122,107,.4);}
+
+  .add-row{display:flex; gap:10px; margin-bottom:12px;}
+  .btn-add{flex:1; min-width:0; border:none; border-radius:16px; padding:18px 8px; font-size:17px; font-weight:800; color:#0c1812;}
+  .btn-add .plus{display:block; font-size:13px; font-weight:600; opacity:.75; margin-top:3px;}
+  .btn-add.a0{background:var(--ball);}
+  .btn-add.a1{background:#7ad3ff;}
+  .btn-add:active{transform:scale(.97);}
+  .btn-add span.nm{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+  .mic-zone{text-align:center; padding:6px 0 2px;}
+  .mic-big{width:92px; height:92px; border-radius:50%; border:2px solid var(--line); background:var(--card);
+    font-size:38px; color:var(--ink); position:relative;}
+  .mic-big.on{border-color:var(--danger); background:rgba(255,122,107,.10); animation:pulse 1.3s infinite;}
+  .mic-state{margin-top:10px; font-size:13px; color:var(--muted); min-height:20px;}
+  .mic-state .live{color:var(--danger); font-weight:700;}
+  .heard{margin-top:6px; font-size:13px; color:var(--ok); min-height:18px; word-break:break-all;}
+
+  .tools{display:flex; gap:10px; margin-top:14px;}
+  .tool{flex:1; background:var(--card2); border:1px solid var(--line); color:var(--ink);
+    border-radius:12px; padding:12px 4px; font-size:14px;}
+
+  /* Apple Watch 遥控 */
+  .topic-row{display:flex; gap:8px; align-items:center;}
+  .topic-row input{flex:1; min-width:0; background:var(--card2); border:1px solid var(--line); color:var(--ink);
+    border-radius:12px; padding:11px 12px; font-size:14px; outline:none; font-family:ui-monospace,Menlo,monospace;}
+  .btn-mini{flex:none; background:var(--card2); border:1px solid var(--line); color:var(--ink);
+    border-radius:12px; padding:11px 10px; font-size:13px;}
+  .cmd-row{display:flex; gap:8px; margin-top:8px;}
+  .cmd-row .btn-mini{flex:1; padding:10px 2px; font-size:12px;}
+  .watch-steps{margin-top:10px; color:var(--muted); font-size:12px; line-height:1.9;}
+  .watch-steps summary{cursor:pointer; color:var(--ink); font-size:13px; font-weight:600; padding:4px 0;}
+  .watch-steps code{background:var(--card2); border:1px solid var(--line); border-radius:6px; padding:1px 6px; color:var(--ball); font-size:11px; word-break:break-all;}
+  .watch-steps ol{margin:6px 0; padding-left:18px;}
+  .remote-chip{margin-top:8px; font-size:12px; color:var(--muted);}
+  .remote-chip.on{color:var(--ok);}
+
+  /* ===== 结果页 ===== */
+  .trophy{text-align:center; font-size:64px; margin:26px 0 6px;}
+  .winner{text-align:center; font-size:28px; font-weight:800; margin-bottom:4px;}
+  .final{text-align:center; color:var(--muted); margin-bottom:18px;}
+  .glog{margin:0; padding:0; list-style:none;}
+  .glog li{display:flex; justify-content:space-between; padding:10px 4px; border-bottom:1px dashed var(--line); font-size:15px;}
+  .glog li:last-child{border-bottom:none;}
+  .glog .who{font-weight:700;}
+  .res-btns{display:flex; gap:10px; margin-top:18px;}
+  .res-btns .btn-main{flex:1;}
+  .btn-ghost{flex:1; background:none; border:1px solid var(--line); color:var(--ink); border-radius:14px; padding:16px; font-size:16px;}
+
+  .toast{position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:#000c; color:#fff;
+    padding:10px 18px; border-radius:999px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .25s; max-width:86vw; text-align:center; z-index:9;}
+  .toast.show{opacity:1;}
+
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,122,107,.45);} 70%{box-shadow:0 0 0 16px rgba(255,122,107,0);} 100%{box-shadow:0 0 0 0 rgba(255,122,107,0);}}
+  @keyframes pop{0%{transform:scale(1);} 35%{transform:scale(1.22); color:var(--ball);} 100%{transform:scale(1);}}
+</style>
+</head>
+<body>
+
+<!-- ========== 设置页 ========== -->
+<div class="page show" id="pageSetup">
+  <div class="logo">🎾</div>
+  <h1>网球语音计分</h1>
+  <p class="sub">动口不动手，专心打球</p>
+
+  <div class="card">
+    <h2>赛制 · 几局几胜</h2>
+    <div class="formats" id="formats">
+      <button class="fmt" data-n="1">1局<small>决胜局</small></button>
+      <button class="fmt sel" data-n="3">3局<small>2胜</small></button>
+      <button class="fmt" data-n="5">5局<small>3胜</small></button>
+      <button class="fmt" data-n="7">7局<small>4胜</small></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>对战双方 · 1号 / 2号（手动输入姓名）</h2>
+    <div class="name-row">
+      <span class="name-tag p0">1号</span>
+      <input id="name0" type="text" placeholder="1号选手姓名，如：张三" maxlength="12">
+    </div>
+    <div class="name-row">
+      <span class="name-tag p1">2号</span>
+      <input id="name1" type="text" placeholder="2号选手姓名，如：李四" maxlength="12">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>⌚ Apple Watch 记分（可选）</h2>
+    <p style="margin:0 0 10px; font-size:13px; color:var(--muted); line-height:1.7;">
+      比赛时手机放场边，在 Apple Watch 上点按「<b>一号得分 / 二号得分</b>」快捷指令即可记分</p>
+    <div class="topic-row">
+      <input id="topicInput" type="text" maxlength="40" spellcheck="false" autocapitalize="off">
+      <button class="btn-mini" id="btnNewTopic">换频道</button>
+    </div>
+    <div class="cmd-row">
+      <button class="btn-mini" id="btnCopy1">复制「一号得分」<br>链接</button>
+      <button class="btn-mini" id="btnCopy2">复制「二号得分」<br>链接</button>
+      <button class="btn-mini" id="btnCopyU">复制「撤销得分」<br>链接</button>
+    </div>
+    <details class="watch-steps">
+      <summary>Apple Watch 配置教程（一次性，约 3 分钟）</summary>
+      <ol>
+        <li>iPhone 打开「快捷指令」App → 新建快捷指令，命名为「<b>撤销得分</b>」</li>
+        <li>添加操作「<b>获取 URL 内容</b>」，URL 粘贴上方「复制『撤销得分』链接」得到的地址</li>
+        <li>快捷指令打开「<b>在 Apple Watch 上显示</b>」</li>
+        <li>同样依次再建「<b>二号得分</b>」，<b>最后建「一号得分」</b>，各自粘贴对应链接（后建的在手表上排在前，这样从上到下正好是 一号得分、二号得分、撤销得分）</li>
+      </ol>
+      用法：在 Apple Watch 的「快捷指令」App 里点按「<b>一号得分 / 二号得分 / 撤销得分</b>」即可记分。1号 = 页面左侧选手<br>
+      📶 指令经公共消息服务 ntfy.sh 转发，手机和手表都需联网;频道名随机生成，别人猜不到就收不到你的比分。
+    </details>
+  </div>
+
+  <button class="btn-main" id="btnStart">开 始 比 赛</button>
+  <p class="hint">
+    📣 比赛中说「<b>一号得分</b>」「<b>二号得分</b>」记分，或「撤销得分」<br>
+    🔊 每次得分自动播报当前轮次与比分，并直接念选手姓名<br>
+    📱 需 Chrome / Safari 并允许使用麦克风；开外放、调大音量
+  </p>
+</div>
+
+<!-- ========== 比赛页 ========== -->
+<div class="page" id="pageMatch">
+  <div class="top">
+    <span class="fmt-label" id="fmtLabel">三局两胜</span>
+    <button class="btn-quit" id="btnQuit">结束比赛</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="games-row">
+      <span class="gname p0c" id="gName0">选手一</span>
+      <span class="gscore"><span id="g0">0</span> - <span id="g1">0</span></span>
+      <span class="gname p1c" id="gName1">选手二</span>
+    </div>
+    <div class="round-label" id="roundLabel">第 1 局</div>
+    <div class="points">
+      <span class="pt" id="p0">0</span>
+      <span class="pt-sep">:</span>
+      <span class="pt" id="p1">0</span>
+    </div>
+    <div class="badge-row" id="badgeRow"></div>
+  </div>
+
+  <div class="add-row">
+    <button class="btn-add a0" id="add0"><span class="nm">选手一</span><span class="plus">1号 · +1</span></button>
+    <button class="btn-add a1" id="add1"><span class="nm">选手二</span><span class="plus">2号 · +1</span></button>
+  </div>
+
+  <div class="mic-zone">
+    <button class="mic-big" id="micBig">🎙</button>
+    <div class="mic-state" id="micState">点麦克风开启语音记分</div>
+    <div class="heard" id="heard"></div>
+    <div class="remote-chip" id="remoteChip">⌚ 遥控未启动</div>
+  </div>
+
+  <div class="tools">
+    <button class="tool" id="btnUndo">↩️ 撤销一分</button>
+    <button class="tool" id="btnSay">🔊 重报比分</button>
+  </div>
+</div>
+
+<!-- ========== 结果页 ========== -->
+<div class="page" id="pageResult">
+  <div class="trophy">🏆</div>
+  <div class="winner" id="winnerName">—</div>
+  <div class="final" id="finalScore">—</div>
+  <div class="card">
+    <h2>各局回顾</h2>
+    <ul class="glog" id="gameLog"></ul>
+  </div>
+  <div class="res-btns">
+    <button class="btn-main" id="btnRematch">再来一场</button>
+    <button class="btn-ghost" id="btnBackSetup">返回设置</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------------- 状态 ---------------- */
+const S = {
+  phase: 'setup',            // setup | playing | finished
+  names: ['选手一', '选手二'],
+  bestOf: 3, needWins: 2,
+  points: [0, 0],            // 当前局内分:0,1,2,3=0/15/30/40,>=4 进入占先区
+  games: [0, 0],             // 局分
+  log: [],                   // 每局 {winner, score:'40:30'…} 文字记录
+  history: [],               // 撤销快照
+  winner: -1
+};
+
+const $ = id => document.getElementById(id);
+const PT = ['0','15','30','40'];
+const PT_SAY = ['零','15','30','40'];
+const NUM_CN = ['零','一','二','三','四','五','六','七','八','九','十'];
+
+/* ---------------- 语音合成(播报) ---------------- */
+let zhVoice = null, speaking = false, sayGuard = null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices() || [];
+  zhVoice = vs.find(v=>/zh[-_]CN/i.test(v.lang)) || vs.find(v=>/^zh/i.test(v.lang)) || null;
+}
+if ('speechSynthesis' in window){
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+function say(text){
+  if (!('speechSynthesis' in window)) return;
+  speaking = true;
+  stopRec();                                   // 播报时停听,防止系统听见自己
+  try{ speechSynthesis.cancel(); }catch(e){}
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN'; if (zhVoice) u.voice = zhVoice;
+  u.rate = 1.05; u.pitch = 1;
+  const done = ()=>{
+    if (!speaking) return;
+    speaking = false;
+    clearTimeout(sayGuard);
+    resumeRec();                               // 播完恢复聆听
+  };
+  u.onend = done; u.onerror = done;
+  clearTimeout(sayGuard);
+  sayGuard = setTimeout(done, 1800 + text.length * 240);  // onend 不触发时兜底
+  speechSynthesis.speak(u);
+}
+
+/* ---------------- 语音识别(仅比赛记分) ---------------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, recActive = false, micOn = false;
+
+function buildRec(){
+  if (!SR) return null;
+  const r = new SR();
+  r.lang = 'zh-CN'; r.continuous = false; r.interimResults = false; r.maxAlternatives = 3;
+  r.onstart = ()=>{ recActive = true; renderMic(); };
+  r.onend   = ()=>{
+    recActive = false; renderMic();
+    if (micOn && !speaking && S.phase === 'playing') setTimeout(startRec, 300);   // 连续聆听:结束即重启
+  };
+  r.onerror = e=>{
+    recActive = false; renderMic();
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+      micOn = false; renderMic();
+      toast('麦克风被拒绝，请在浏览器设置里允许本页使用麦克风');
+    }
+  };
+  r.onresult = e=>{
+    const t = (e.results[e.results.length-1][0].transcript || '').trim();
+    if (!t) return;
+    if (S.phase === 'playing'){ $('heard').textContent = '听到：「' + t + '」'; handleVoice(t); }
+  };
+  return r;
+}
+rec = buildRec();
+
+function startRec(){
+  if (!rec || recActive || speaking) return;
+  try{ rec.start(); }catch(e){}
+}
+function stopRec(){ if (rec && recActive){ try{ rec.abort(); }catch(e){} } }
+function resumeRec(){
+  if (micOn && S.phase === 'playing') setTimeout(startRec, 250);
+}
+
+/* ---------------- 工具 ---------------- */
+let toastTimer = null;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function cn(n){ return NUM_CN[n] || String(n); }
+function norm(s){ return (s||'').toLowerCase().replace(/[\s。,，.!！?？、的得了吧啊呀]/g,''); }
+
+/* ---------------- 设置页 ---------------- */
+$('formats').addEventListener('click', e=>{
+  const b = e.target.closest('.fmt'); if (!b) return;
+  document.querySelectorAll('.fmt').forEach(x=>x.classList.remove('sel'));
+  b.classList.add('sel');
+  S.bestOf = +b.dataset.n; S.needWins = Math.ceil(S.bestOf/2);
+});
+
+$('btnStart').addEventListener('click', ()=>{
+  const n0 = $('name0').value.trim() || '选手一';
+  const n1 = $('name1').value.trim() || '选手二';
+  if (norm(n0) === norm(n1)){ toast('两位选手的名字不能相同'); return; }
+  S.names = [n0, n1];
+  S.points = [0,0]; S.games = [0,0]; S.log = []; S.history = []; S.winner = -1;
+  S.phase = 'playing';
+  showPage('pageMatch'); renderAll(); keepAwake(); connectRemote();
+
+  const fmt = S.bestOf === 1 ? '一局定胜负' : `${cn(S.bestOf)}局${cn(S.needWins)}胜`;
+  // 在用户手势内先发一次空播报,解锁 iOS 的语音合成
+  try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){}
+  micOn = !!SR;
+  say(`比赛开始!${fmt}。一号，${n0};二号，${n1}。得分请说，一号得分，或，二号得分。第一局，开始!`);
+  if (!SR) toast('当前浏览器不支持语音识别，可用按钮记分，播报不受影响');
+});
+
+/* ---------------- 计分核心 ---------------- */
+function snapshot(){
+  S.history.push(JSON.stringify({points:S.points, games:S.games, log:S.log}));
+  if (S.history.length > 200) S.history.shift();
+}
+function restore(){
+  if (!S.history.length) return false;
+  const h = JSON.parse(S.history.pop());
+  S.points = h.points; S.games = h.games; S.log = h.log; S.winner = -1;
+  if (S.phase === 'finished'){ S.phase = 'playing'; showPage('pageMatch'); }
+  return true;
+}
+
+function scoreText(){             // 当前局内分的口播文本
+  const [a,b] = S.points;
+  if (a>=3 && b>=3){
+    if (a===b) return '平分';
+    return (a>b ? S.names[0] : S.names[1]) + '占先';
+  }
+  return `${PT_SAY[Math.min(a,3)]} 比 ${PT_SAY[Math.min(b,3)]}`;
+}
+function scoreDisp(i){            // 屏显
+  const [a,b] = S.points;
+  if (a>=3 && b>=3){
+    if (a===b) return '40';
+    return (i === (a>b?0:1)) ? 'AD' : '40';
+  }
+  return PT[Math.min(S.points[i],3)];
+}
+function isGamePoint(i){          // i 再得一分即拿下本局
+  const a = S.points[i], b = S.points[1-i];
+  return a >= 3 && a - b >= 1;
+}
+
+function addPoint(i){
+  if (S.phase !== 'playing') return;
+  snapshot();
+  S.points[i]++;
+  flash(i);
+  const a = S.points[i], b = S.points[1-i];
+  const won = a>=4 && a-b>=2;
+
+  if (!won){
+    renderAll();
+    let extra = '';
+    const [na, nb] = S.points;
+    if (na !== nb){
+      const leader = na > nb ? 0 : 1;   // 局点可能在得分方,也可能在对手(如 15:40 后追到 30:40)
+      if (isGamePoint(leader)) extra = (S.games[leader]+1 >= S.needWins) ? '赛点!' : '局点!';
+    }
+    say(`${S.names[i]}得分。${scoreText()}。${extra}`);
+    return;
+  }
+
+  // 拿下一局
+  const finalPt = `${scoreDisp(0)}:${scoreDisp(1)}`;
+  S.games[i]++;
+  S.log.push({winner:i, score:finalPt});
+  const gameNo = S.log.length;
+  S.points = [0,0];
+
+  if (S.games[i] >= S.needWins){
+    S.winner = i; S.phase = 'finished';
+    renderAll(); renderResult(); showPage('pageResult');
+    micOn = false; stopRec();
+    say(`${S.names[i]}得分!拿下第${cn(gameNo)}局!比赛结束!${S.names[i]}，以${cn(S.games[i])}比${cn(S.games[1-i])}，战胜${S.names[1-i]}!恭喜!`);
+    releaseWake();
+  } else {
+    renderAll();
+    say(`${S.names[i]}得分!拿下第${cn(gameNo)}局!当前局分，${cn(S.games[0])}比${cn(S.games[1])}。第${cn(gameNo+1)}局，开始!`);
+  }
+}
+
+function undo(){
+  if (!restore()){ toast('没有可撤销的记录了'); return; }
+  renderAll();
+  say(`已撤销。${announceText()}`);
+}
+function announceText(){
+  const round = S.games[0]+S.games[1]+1;
+  return `当前第${cn(round)}局，局分${cn(S.games[0])}比${cn(S.games[1])}。本局，${scoreText()}。`;
+}
+
+/* ---------------- 语音命令解析 ---------------- */
+function handleVoice(raw){
+  const t = norm(raw);
+  if (!t) return;
+  if (/撤销|撤回|取消|回退|退回|删除|删掉|错了|不对|搞错|重来|上一分/.test(t)){ undo(); return; }
+  if (/比分|报分|报一下|几比几|多少分|当前分|现在分|现在多少/.test(t)){ say(announceText()); return; }
+
+  const p = detectPlayer(t);
+  if (p === 'both'){ say('一号、二号都听到了，请只说一个。'); return; }
+  if (p === 0){ addPoint(0); return; }
+  if (p === 1){ addPoint(1); return; }
+  toast('没听懂：「' + raw + '」，请说「一号得分」或「二号得分」');
+}
+
+// 模糊匹配得分选手——容忍语音误识别(壹/幺/七号 等都按一号处理;系统只有一号、二号)
+function detectPlayer(t){
+  const sig2 = /(二号|两号|俩号|贰号|2号|２号|乙号?|右边|右侧|对手|player ?2|number ?2|second|two)/.test(t);
+  const sig1 = /(一号|壹号|幺号|么号|妖号|1号|１号|甲号?|左边|左侧|player ?1|number ?1|first|one)/.test(t);
+  if (sig1 && sig2) return 'both';
+  if (sig2) return 1;
+  if (sig1) return 0;
+  // 听到“某数字+号”却没对上(如 七号/三号/五号):系统只有两名选手,判为一号
+  if (/[0-9０-９三四五六七八九十零叁肆伍陆柒捌玖拾]号/.test(t)) return 0;
+  return -1;
+}
+
+/* ---------------- 渲染 ---------------- */
+function showPage(id){
+  ['pageSetup','pageMatch','pageResult'].forEach(p=>$(p).classList.toggle('show', p===id));
+}
+function flash(i){
+  const el = $('p'+i); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+function renderAll(){
+  $('gName0').textContent = '① ' + S.names[0]; $('gName1').textContent = '② ' + S.names[1];
+  $('add0').querySelector('.nm').textContent = S.names[0];
+  $('add1').querySelector('.nm').textContent = S.names[1];
+  $('g0').textContent = S.games[0]; $('g1').textContent = S.games[1];
+  $('p0').textContent = scoreDisp(0); $('p1').textContent = scoreDisp(1);
+  $('roundLabel').textContent = `第 ${S.games[0]+S.games[1]+1} 局`;
+  $('fmtLabel').textContent = S.bestOf===1 ? '一局定胜负' : `${cn(S.bestOf)}局${cn(S.needWins)}胜`;
+
+  const [a,b] = S.points; let badge = '';
+  if (a>=3 && b>=3 && a===b) badge = '<span class="badge">平分 DEUCE</span>';
+  else {
+    const leader = a>b ? 0 : 1;
+    if ((a>=3||b>=3) && a!==b && isGamePoint(leader)){
+      badge = (S.games[leader]+1 >= S.needWins)
+        ? '<span class="badge hot">赛点 MATCH POINT</span>'
+        : '<span class="badge">局点 GAME POINT</span>';
+    }
+  }
+  $('badgeRow').innerHTML = badge;
+}
+function renderMic(){
+  const b = $('micBig'), s = $('micState');
+  if (!SR){ b.style.opacity=.4; s.textContent='此浏览器不支持语音识别，请用按钮记分'; return; }
+  b.classList.toggle('on', micOn);
+  if (micOn){
+    s.innerHTML = recActive
+      ? '<span class="live">● 正在聆听…</span> 说「一号得分」「二号得分」'
+      : (speaking ? '🔊 播报中…' : '<span class="live">●</span> 准备聆听…');
+  } else {
+    s.textContent = '语音已暂停，点麦克风继续';
+  }
+}
+function renderResult(){
+  $('winnerName').textContent = '🎉 ' + S.names[S.winner] + ' 获胜';
+  $('finalScore').textContent = `总局分 ${S.games[0]} : ${S.games[1]}（${S.names[0]} vs ${S.names[1]}）`;
+  $('gameLog').innerHTML = S.log.map((g,idx)=>
+    `<li><span>第 ${idx+1} 局 <span style="color:var(--muted)">（${g.score}）</span></span><span class="who">${S.names[g.winner]} 胜</span></li>`
+  ).join('') || '<li>无记录</li>';
+}
+
+/* ---------------- 比赛页按钮 ---------------- */
+$('add0').addEventListener('click', ()=>addPoint(0));
+$('add1').addEventListener('click', ()=>addPoint(1));
+$('btnUndo').addEventListener('click', undo);
+$('btnSay').addEventListener('click', ()=>say(announceText()));
+$('micBig').addEventListener('click', ()=>{
+  if (!SR){ toast('此浏览器不支持语音识别'); return; }
+  micOn = !micOn;
+  if (micOn) startRec(); else stopRec();
+  renderMic();
+});
+$('btnQuit').addEventListener('click', ()=>{
+  if (!confirm('确定提前结束本场比赛吗?')) return;
+  micOn = false; stopRec();
+  if (S.games[0] !== S.games[1]){
+    S.winner = S.games[0] > S.games[1] ? 0 : 1;
+    S.phase = 'finished'; renderResult(); showPage('pageResult');
+    say(`比赛提前结束，${S.names[S.winner]}以${cn(S.games[S.winner])}比${cn(S.games[1-S.winner])}领先获胜。`);
+  } else {
+    S.phase = 'setup'; showPage('pageSetup'); disconnectRemote();
+    try{ speechSynthesis.cancel(); }catch(e){}
+  }
+  releaseWake();
+});
+
+/* ---------------- 结果页按钮 ---------------- */
+$('btnRematch').addEventListener('click', ()=>{
+  S.points=[0,0]; S.games=[0,0]; S.log=[]; S.history=[]; S.winner=-1; S.phase='playing';
+  showPage('pageMatch'); renderAll(); keepAwake(); connectRemote();
+  micOn = !!SR;
+  say(`新的一场比赛开始!${S.names[0]}，对阵，${S.names[1]}。第一局，开始!`);
+});
+$('btnBackSetup').addEventListener('click', ()=>{
+  S.phase='setup'; showPage('pageSetup'); disconnectRemote();
+  try{ speechSynthesis.cancel(); }catch(e){}
+});
+
+/* ---------------- Apple Watch 遥控(经 ntfy.sh 频道) ---------------- */
+const NTFY = 'https://ntfy.sh';
+let es = null, esOK = false;
+const seenIds = [];
+
+function getTopic(){ return (localStorage.getItem('tennis_topic') || '').trim(); }
+function setTopic(t){ try{ localStorage.setItem('tennis_topic', t.trim()); }catch(e){} }
+function genTopic(){ return 'tn-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6); }
+function topicUrl(){ return NTFY + '/' + encodeURIComponent(getTopic()); }
+
+function initRemoteUI(){
+  if (!getTopic()) setTopic(genTopic());
+  $('topicInput').value = getTopic();
+  renderRemote();
+}
+function connectRemote(){
+  if (es){ try{ es.close(); }catch(e){} es = null; esOK = false; }
+  if (!getTopic() || !window.EventSource){ renderRemote(); return; }
+  try{ es = new EventSource(topicUrl() + '/sse'); }catch(e){ es = null; renderRemote(); return; }
+  es.onopen  = ()=>{ esOK = true;  renderRemote(); };
+  es.onerror = ()=>{ esOK = false; renderRemote(); };   // EventSource 断线自动重连
+  es.onmessage = ev=>{
+    let d = null; try{ d = JSON.parse(ev.data); }catch(e){ return; }
+    if (!d || !d.message) return;
+    if (d.id){ if (seenIds.indexOf(d.id) >= 0) return; seenIds.push(d.id); if (seenIds.length > 30) seenIds.shift(); }
+    if (S.phase === 'setup') return;
+    $('heard').textContent = '⌚ 收到：「' + d.message + '」';
+    handleVoice(d.message);
+  };
+  renderRemote();
+}
+function disconnectRemote(){ if (es){ try{ es.close(); }catch(e){} } es = null; esOK = false; renderRemote(); }
+function renderRemote(){
+  const chip = $('remoteChip'); if (!chip) return;
+  if (!es){ chip.className = 'remote-chip'; chip.textContent = '⌚ 遥控未启动'; return; }
+  chip.className = 'remote-chip' + (esOK ? ' on' : '');
+  chip.textContent = esOK ? ('⌚ 手表遥控已连接 · 频道 ' + getTopic()) : '⌚ 遥控连接中…';
+}
+function copyText(t){
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(()=>toast('已复制：' + t), ()=>fallbackCopy(t));
+  } else fallbackCopy(t);
+}
+function fallbackCopy(t){
+  const ta = document.createElement('textarea'); ta.value = t;
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast('已复制：' + t); }catch(e){ prompt('请手动复制', t); }
+  document.body.removeChild(ta);
+}
+function cmdUrl(cmd){ return topicUrl() + '/publish?message=' + encodeURIComponent(cmd); }
+$('btnCopy1').addEventListener('click', ()=>copyText(cmdUrl('一号得分')));
+$('btnCopy2').addEventListener('click', ()=>copyText(cmdUrl('二号得分')));
+$('btnCopyU').addEventListener('click', ()=>copyText(cmdUrl('撤销得分')));
+$('btnNewTopic').addEventListener('click', ()=>{
+  setTopic(genTopic()); $('topicInput').value = getTopic();
+  toast('已生成新频道，手表快捷指令里的地址记得同步更新');
+  if (es) connectRemote();
+});
+$('topicInput').addEventListener('change', ()=>{
+  const v = $('topicInput').value.trim().replace(/[^\w-]/g, '');
+  if (!v){ $('topicInput').value = getTopic(); return; }
+  setTopic(v); $('topicInput').value = v;
+  if (es) connectRemote();
+});
+
+/* ---------------- 屏幕常亮 ---------------- */
+let wakeLock = null;
+async function keepAwake(){
+  try{ if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+}
+function releaseWake(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock = null; }
+document.addEventListener('visibilitychange', ()=>{
+  if (!document.hidden && S.phase==='playing'){ keepAwake(); if (micOn) startRec(); }
+});
+
+renderMic();
+initRemoteUI();
+})();
+</script>
+</body>
+</html>

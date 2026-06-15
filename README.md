@@ -4,9 +4,7 @@
 
 ## 演示
 
-<video src="https://github.com/ChanceXuan/tennis-score/raw/main/demo.mp4" controls width="320"></video>
-
-> 如果上方播放器没显示（部分客户端不渲染内嵌视频），点这里查看：[demo.mp4](demo.mp4)
+▶️ **[点击播放演示视频](demo.mp4)**（在 GitHub 上会打开内嵌播放器）
 
 ## 功能
 

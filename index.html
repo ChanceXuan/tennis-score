@@ -371,7 +371,7 @@ $('btnStart').addEventListener('click', ()=>{
   if (!SR) toast('当前浏览器不支持语音识别，可用按钮记分，播报不受影响');
 });
 
-/* ---------------- 计分核心 ---------------- */
+/* ---------------- 记分核心 ---------------- */
 function snapshot(){
   S.history.push(JSON.stringify({points:S.points, games:S.games, log:S.log}));
   if (S.history.length > 200) S.history.shift();

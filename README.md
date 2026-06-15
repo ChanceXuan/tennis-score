@@ -2,6 +2,12 @@
 
 手机端单文件网页，用于网球比赛实时计分：**语音 / 点按记分**，自动**语音播报**比分，并支持 **Apple Watch** 远程点按记分。零依赖、纯静态。
 
+## 演示
+
+<video src="https://github.com/ChanceXuan/tennis-score/raw/main/demo.mp4" controls width="320"></video>
+
+> 如果上方播放器没显示（部分客户端不渲染内嵌视频），点这里查看：[demo.mp4](demo.mp4)
+
 ## 功能
 
 - **赛制**：1 / 3 / 5 / 7 局几胜可选

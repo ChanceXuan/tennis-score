@@ -4,7 +4,7 @@
 
 ## 演示
 
-▶️ **[点击播放演示视频](demo.mp4)**（在 GitHub 上会打开内嵌播放器）
+https://github.com/user-attachments/assets/ff8f95b5-8499-4667-98c9-a24e97ed9536
 
 ## 功能
 
